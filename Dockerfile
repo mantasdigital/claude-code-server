@@ -62,7 +62,6 @@ ENV ENTRYPOINTD=/home/clauder/entrypoint.d
 # - Can use sudo for package installs (apt, npm -g, pip, etc.)
 # ============================================================================
 
-# Install sudo if not present, then configure user
 RUN apt-get update && apt-get install -y sudo \
     && rm -rf /var/lib/apt/lists/* \
     && (groupadd -g 1000 clauder 2>/dev/null || true) \
@@ -95,11 +94,16 @@ RUN chmod +x /usr/bin/railway-entrypoint.sh
 
 # ============================================================================
 # CLAUDE CODE CLI INSTALLATION
-# Install globally via npm - this is the official package
+# Install globally via npm, then replace the Bun binary with a Node wrapper.
+# Bun v1.3.11 crashes on Kernel 6.18+ with "Failed to start HTTP Client thread".
+# The Node wrapper routes all `claude` calls through Node instead of Bun.
 # ============================================================================
 
 RUN npm install -g @anthropic-ai/claude-code \
-    && echo "Claude CLI installed: $(claude --version 2>/dev/null || echo 'checking...')"
+    && printf '#!/bin/bash\nexec node /usr/local/lib/node_modules/@anthropic-ai/claude-code/cli.js "$@"\n' > /home/clauder/.local/bin/claude \
+    && chmod +x /home/clauder/.local/bin/claude \
+    && chown 1000:1000 /home/clauder/.local/bin/claude \
+    && echo "Claude CLI installed via Node wrapper (Bun crash workaround)"
 
 # ============================================================================
 # RUNTIME
@@ -111,5 +115,3 @@ EXPOSE 8080
 
 # Use our entrypoint which calls code-server directly
 ENTRYPOINT ["/usr/bin/railway-entrypoint.sh"]
-
-
