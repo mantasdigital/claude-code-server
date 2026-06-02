@@ -264,4 +264,5 @@ exec dumb-init /usr/bin/code-server \
     --bind-addr 0.0.0.0:8080 \
     --app-name "$APP_NAME" \
     --welcome-text "$WELCOME_TEXT" \
+    --disable-update-check \
     "$CLAUDER_HOME/workspace"

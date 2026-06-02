@@ -106,6 +106,24 @@ RUN npm install -g @anthropic-ai/claude-code \
     && echo "Claude CLI installed via Node wrapper (Bun crash workaround)"
 
 # ============================================================================
+# SILENCE BENIGN "File not found" ASSET ERRORS
+# The open-source code-server build does NOT ship Microsoft's proprietary
+# `vsda` connection-signing module or the prebuilt xterm ligatures addon.
+# The browser requests these on every (re)connection, so code-server 404s and
+# logs a noisy "[err] File not found" line each time, even though it falls back
+# gracefully and nothing breaks. Create empty stubs so the static file handler
+# serves them instead of spamming the deploy logs. Worst case is identical to
+# today's behaviour (signing/ligatures simply stay disabled).
+# ============================================================================
+
+RUN VSCODE_NM=/usr/lib/code-server/lib/vscode/node_modules \
+    && mkdir -p "$VSCODE_NM/vsda/rust/web" "$VSCODE_NM/@xterm/addon-ligatures/lib" \
+    && touch "$VSCODE_NM/vsda/rust/web/vsda.js" \
+             "$VSCODE_NM/vsda/rust/web/vsda_bg.wasm" \
+             "$VSCODE_NM/@xterm/addon-ligatures/lib/addon-ligatures.js" \
+    && echo "Created stubs for missing vsda / addon-ligatures assets"
+
+# ============================================================================
 # RUNTIME
 # Stay as root - entrypoint handles user switching based on RUN_AS_USER
 # ============================================================================
